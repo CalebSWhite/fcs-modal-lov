@@ -111,16 +111,17 @@
 }
 
 // Using class apex-item-text as well as fcs-readonly-item gives it priority over the theme
-.apex-item-text.fcs-modal-lov-readonly-item {
-  color: black;
-  background-color: rgb(224, 222, 222);
-  opacity: 1;
-  pointer-events: all;
-
-  :hover {
+.apex-item-text {
+  .fcs-modal-lov-readonly-item {
+    color: black;
+    background-color: rgb(224, 222, 222);
+    opacity: 1;
+    pointer-events: all;
+  }
+  .fcs-modal-lov-readonly-item:hover {
     background-color: rgb(224, 222, 222);
   }
-  :focus {
+  .fcs-modal-lov-readonly-item:focus {
     background-color: rgb(224, 222, 222) !important;
   }
 }

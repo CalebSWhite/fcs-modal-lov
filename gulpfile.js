@@ -14,7 +14,7 @@ gulp.task('javascript', function () {
     extensions: ['hbs']
   })
 
-  browserify('src/js/modal-lov.js', {debug: true})
+  return browserify('src/js/modal-lov.js', {debug: true})
     .on('error', gutil.log)
     .transform(hbsfy)
     .on('error', gutil.log)
@@ -43,12 +43,14 @@ gulp.task('less', function () {
     .pipe(gulp.dest('dist/'))
 })
 
-gulp.task('default', ['javascript', 'less'], function () {
+gulp.task('default', gulp.series('javascript', 'less', watch));
+
+function watch() {
   gulp.watch([
     'src/js/modal-lov.js',
     'src/js/templates/**/*.hbs'
-  ], ['javascript'])
+  ], gulp.series('javascript'))
   gulp.watch([
     'src/less/*.less'
-  ], ['less'])
-})
+  ], gulp.series('less'))
+}

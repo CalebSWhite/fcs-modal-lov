@@ -1,17 +1,17 @@
 // Styling for the clear search icon
 .t-Form-inputContainer, .a-GV-columnItem {
-  .search-clear {
+  .fcs-search-clear {
     order: 3;
-    transform: translateX(-20px);
+    transform: translateX(-50px);
     align-self: center;
     height: 14px;
     margin-right: -14px;
     font-size: 14px;
     cursor: pointer;
     z-index: 1;
-  } 
+  }
 }
-.u-RTL .t-Form-inputContainer .search-clear, .u-RTL .a-GV-columnItem .search-clear {
+.u-RTL .t-Form-inputContainer .fcs-search-clear, .u-RTL .a-GV-columnItem .fcs-search-clear {
   left: 20px;
   margin-left: -14px;
   right: unset;
@@ -25,10 +25,26 @@
     z-index: 1;
   }
 }
+.fcs-modal-lov-container {
+  display: inline-flex;
+  width: 100%;
+}
+.apex-item-text.fcs-modal-lov {
+  padding-right: 50px;
+  flex: none;
+}
 
 
-.modal-lov-button {
+.fcs-modal-lov-button {
   order: 4;
+  transform: translateX(-30px);
+  border-left: 1px solid rgb(0 0 0 / 13%) !important;
+  border-bottom: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  z-index: 1;
 }
 
 // Styling for the modal LOV
@@ -38,7 +54,7 @@
   .no-padding {
     padding: 0;
   }
-  .t-Form-fieldContainer{
+  .t-Form-fieldContainer {
     flex: 0;
   }
   .t-DialogRegion-body {
@@ -65,10 +81,10 @@
       cursor: pointer;
     }
     .hover .t-Report-cell {
-      background-color: inherit!important;
+      background-color: inherit !important;
     }
     .mark .t-Report-cell {
-      background-color: inherit!important;
+      background-color: inherit !important;
     }
   }
 
@@ -89,7 +105,22 @@
 .a-GV-columnItem .apex-item-group {
   width: 100%;
 }
-.a-GV-columnItem .oj-form-control { 
+.a-GV-columnItem .oj-form-control {
   max-width: none;
   margin-bottom: 0;
+}
+
+// Using class apex-item-text as well as fcs-readonly-item gives it priority over the theme
+.apex-item-text.fcs-modal-lov-readonly-item {
+  color: black;
+  background-color: rgb(224, 222, 222);
+  opacity: 1;
+  pointer-events: all;
+
+  :hover {
+    background-color: rgb(224, 222, 222);
+  }
+  :focus {
+    background-color: rgb(224, 222, 222) !important;
+  }
 }

@@ -35,7 +35,9 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       markClasses: 'u-hot',
       hoverClasses: 'hover u-color-1',
       previousLabel: 'previous',
-      nextLabel: 'next'
+      nextLabel: 'next',
+      textCase: 'N',
+      additionalOutputsStr: '',
     },
 
     _returnValue: '',
@@ -70,6 +72,18 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         this._grid.focus()
       } else {
         this._item$.focus()
+        // Focus on next element if ENTER key used to select row.
+        setTimeout(function () {
+          if (self.options.returnOnEnterKey) {
+            self.options.returnOnEnterKey = false;
+            if (self.options.isPrevIndex) {
+              self._focusPrevElement()
+            } else {
+              self._focusNextElement()
+            }
+          }
+          self.options.isPrevIndex = false
+        }, 100)
       }
     },
 
@@ -83,18 +97,21 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       106, 107, 109, 110, 111, 186, 187, 188, 189, 190, 191, 192, 219, 220, 221, 220 // interpunction
     ],
 
+    // Keys to indicate completing input (esc, tab, enter)
+    _validNextKeys: [9, 27, 13],
+
     _create: function () {
       var self = this
 
       self._item$ = $('#' + self.options.itemName)
       self._returnValue = self._item$.data('returnValue').toString()
       self._searchButton$ = $('#' + self.options.searchButton)
-      self._clearInput$ = self._item$.parent().find('.search-clear')
+      self._clearInput$ = self._item$.parent().find('.fcs-search-clear')
 
       self._addCSSToTopLevel()
 
       // Trigger event on click input display field
-      self._triggerLOVOnDisplay()
+      self._triggerLOVOnDisplay('000 - create')
 
       // Trigger event on click input group addon button (magnifier glass)
       self._triggerLOVOnButton()
@@ -143,7 +160,8 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       // but open modal and forget about it
       // in the end, this should keep things intact as they were
       options.widget._destroy(modal)
-      options.widget._triggerLOVOnDisplay()
+      this._setItemValues(options.widget._returnValue);
+      options.widget._triggerLOVOnDisplay('009 - close dialog')
     },
 
     _initGridConfig: function () {
@@ -161,10 +179,10 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
 
       // Create LOV region
       var $modalRegion = self._topApex.jQuery(modalReportTemplate(self._templateData)).appendTo('body')
-      
+
       // Open new modal
       $modalRegion.dialog({
-        height: $modalRegion.find('.t-Report-wrap').height() + 150, // + dialog button height
+        height: (self.options.rowCount * 33) + 199, // + dialog button height
         width: self.options.modalWidth,
         closeText: apex.lang.getMessage('APEX.DIALOG.CLOSE'),
         draggable: true,
@@ -231,7 +249,8 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         },
         searchField: {
           id: self.options.searchField,
-          placeholder: self.options.searchPlaceholder
+          placeholder: self.options.searchPlaceholder,
+          textCase: self.options.textCase === 'U' ? 'u-textUpper' : self.options.textCase === 'L' ? 'u-textLower' : '',
         },
         report: {
           columns: {},
@@ -240,7 +259,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
           rowCount: 0,
           showHeaders: self.options.showHeaders,
           noDataFound: self.options.noDataFound,
-          classes: (self.options.allowMultilineRows) ? 'multiline' : ''
+          classes: (self.options.allowMultilineRows) ? 'multiline' : '',
         },
         pagination: {
           rowCount: 0,
@@ -249,8 +268,8 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
           allowPrev: false,
           allowNext: false,
           previous: self.options.previousLabel,
-          next: self.options.nextLabel
-        }
+          next: self.options.nextLabel,
+        },
       }
 
       // No rows found?
@@ -488,7 +507,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         firstRow: 1,
         searchTerm: options.searchTerm,
         fillSearchText: options.fillSearchText,
-        loadingIndicator: self._itemLoadingIndicator
+        // loadingIndicator: self._itemLoadingIndicator
       }, options.afterData)
     },
 
@@ -506,22 +525,211 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       }
     },
 
-    _triggerLOVOnDisplay: function () {
+    // Function based on https://stackoverflow.com/a/35173443
+    _focusNextElement: function () {
+      //add all elements we want to include in our selection
+      var focussableElements = [
+        'a:not([disabled]):not([hidden]):not([tabindex="-1"])',
+        'button:not([disabled]):not([hidden]):not([tabindex="-1"])',
+        'input:not([disabled]):not([hidden]):not([tabindex="-1"])',
+        'textarea:not([disabled]):not([hidden]):not([tabindex="-1"])',
+        'select:not([disabled]):not([hidden]):not([tabindex="-1"])',
+        '[tabindex]:not([disabled]):not([tabindex="-1"])',
+      ].join(', ');
+      if (document.activeElement && document.activeElement.form) {
+        var focussable = Array.prototype.filter.call(document.activeElement.form.querySelectorAll(focussableElements),
+          function (element) {
+            //check for visibility while always include the current activeElement
+            return element.offsetWidth > 0 || element.offsetHeight > 0 || element === document.activeElement
+          });
+        var index = focussable.indexOf(document.activeElement);
+        if (index > -1) {
+          var nextElement = focussable[index + 1] || focussable[0];
+          apex.debug.trace('FCS LOV - focus next');
+          nextElement.focus();
+        }
+      }
+    },
+
+    // Function based on https://stackoverflow.com/a/35173443
+    _focusPrevElement: function () {
+      //add all elements we want to include in our selection
+      var focussableElements = [
+        'a:not([disabled]):not([hidden]):not([tabindex="-1"])',
+        'button:not([disabled]):not([hidden]):not([tabindex="-1"])',
+        'input:not([disabled]):not([hidden]):not([tabindex="-1"])',
+        'textarea:not([disabled]):not([hidden]):not([tabindex="-1"])',
+        'select:not([disabled]):not([hidden]):not([tabindex="-1"])',
+        '[tabindex]:not([disabled]):not([tabindex="-1"])',
+      ].join(', ');
+      if (document.activeElement && document.activeElement.form) {
+        var focussable = Array.prototype.filter.call(document.activeElement.form.querySelectorAll(focussableElements),
+          function (element) {
+            //check for visibility while always include the current activeElement
+            return element.offsetWidth > 0 || element.offsetHeight > 0 || element === document.activeElement
+          });
+        var index = focussable.indexOf(document.activeElement);
+        if (index > -1) {
+          var prevElement = focussable[index - 1] || focussable[0];
+          apex.debug.trace('FCS LOV - focus previous');
+          prevElement.focus();
+        }
+      }
+    },
+
+    _setItemValues: function (returnValue) {
+      var self = this;
+      var reportRow = self._templateData.report.rows.find(row => row.returnVal === returnValue);
+
+      apex.item(self.options.itemName).setValue(reportRow?.returnVal || '', reportRow?.displayVal || '');
+
+      if (self.options.additionalOutputsStr) {
+        var dataRow = self.options.dataSource.row.find(row => row[self.options.returnCol] === returnValue);
+
+        self.options.additionalOutputsStr.split(',').forEach(str => {
+          var dataKey = str.split(':')[0];
+          var itemId = str.split(':')[1];
+          var additionalItem = apex.item(itemId);
+          if (itemId && dataKey && additionalItem) {
+            if (dataRow && dataRow[dataKey]) {
+              additionalItem.setValue(dataRow[dataKey], dataRow[dataKey]);
+            } else {
+              additionalItem.setValue('', '');
+            }
+          }
+        });
+      }
+    },
+
+    _triggerLOVOnDisplay: function (calledFrom = null) {
       var self = this
-      // Trigger event on click input display field
-      self._item$.on('keyup', function (e) {
-        if ($.inArray(e.keyCode, self._validSearchKeys) > -1 && (!e.ctrlKey || e.keyCode === 86)) {
-          $(this).off('keyup')
-          self._openLOV({
+
+      if (calledFrom) {
+        apex.debug.trace('_triggerLOVOnDisplay called from "' + calledFrom + '"');
+      }
+
+      // Trigger event on click outside element
+      $(document).mousedown(function (event) {
+        self._item$.off('keydown')
+        $(document).off('mousedown')
+
+        var $target = $(event.target);
+
+        if (!$target.closest('#' + self.options.itemName).length && !self._item$.is(":focus")) {
+          self._triggerLOVOnDisplay('001 - not focused click off');
+          return;
+        }
+
+        if ($target.closest('#' + self.options.itemName).length) {
+          self._triggerLOVOnDisplay('002 - click on input');
+          return;
+        }
+
+        if ($target.closest('#' + self.options.searchButton).length) {
+          self._triggerLOVOnDisplay('003 - click on search: ' + self._item$.val());
+          return;
+        }
+
+        if ($target.closest('.fcs-search-clear').length) {
+          self._triggerLOVOnDisplay('004 - click on clear');
+          return;
+        }
+
+        if (!self._item$.val()) {
+          self._triggerLOVOnDisplay('005 - no items');
+          return;
+        }
+
+        if (self._item$.val().toUpperCase() === apex.item(self.options.itemName).getValue().toUpperCase()) {
+          self._triggerLOVOnDisplay('010 - click no change')
+          return;
+        }
+
+        // console.log('click off - check value')
+        self._getData({
+          searchTerm: self._item$.val(),
+          firstRow: 1,
+          // loadingIndicator: self._modalLoadingIndicator
+        }, function () {
+          if (self._templateData.pagination['rowCount'] === 1) {
+            // 1 valid option matches the search. Use valid option.
+            self._setItemValues(self._templateData.report.rows[0].returnVal);
+            self._triggerLOVOnDisplay('006 - click off match found')
+          } else {
+            // Open the modal
+            self._openLOV({
+              searchTerm: self._item$.val(),
+              fillSearchText: true,
+              afterData: function (options) {
+                self._onLoad(options)
+                // Clear input as soon as modal is ready
+                self._returnValue = ''
+                self._item$.val('')
+              }
+            })
+          }
+        })
+      });
+
+      // Trigger event on tab or enter
+      self._item$.on('keydown', function (e) {
+        self._item$.off('keydown')
+        $(document).off('mousedown')
+
+        // console.log('keydown', e.keyCode)
+
+        if ((e.keyCode === 9 && !!self._item$.val()) || e.keyCode === 13) {
+          // Stop tab event
+          if (e.keyCode === 9) {
+            e.preventDefault()
+            if (e.shiftKey) {
+              self.options.isPrevIndex = true
+            }
+          }
+
+          if (self._item$.val().toUpperCase() === apex.item(self.options.itemName).getValue().toUpperCase()) {
+            if (self.options.isPrevIndex) {
+              self.options.isPrevIndex = false
+              self._focusPrevElement()
+            } else {
+              self._focusNextElement()
+            }
+            self._triggerLOVOnDisplay('011 - key no change')
+            return;
+          }
+
+          // console.log('keydown tab or enter - check value')
+          self._getData({
             searchTerm: self._item$.val(),
-            fillSearchText: true,
-            afterData: function (options) {
-              self._onLoad(options)
-              // Clear input as soon as modal is ready
-              self._returnValue = ''
-              self._item$.val('')
+            firstRow: 1,
+            // loadingIndicator: self._modalLoadingIndicator
+          }, function () {
+            if (self._templateData.pagination['rowCount'] === 1) {
+              // 1 valid option matches the search. Use valid option.
+              self._setItemValues(self._templateData.report.rows[0].returnVal);
+              if (self.options.isPrevIndex) {
+                self.options.isPrevIndex = false
+                self._focusPrevElement()
+              } else {
+                self._focusNextElement()
+              }
+              self._triggerLOVOnDisplay('007 - key off match found')
+            } else {
+              // Open the modal
+              self._openLOV({
+                searchTerm: self._item$.val(),
+                fillSearchText: true,
+                afterData: function (options) {
+                  self._onLoad(options)
+                  // Clear input as soon as modal is ready
+                  self._returnValue = ''
+                  self._item$.val('')
+                }
+              })
             }
           })
+        } else {
+          self._triggerLOVOnDisplay('008 - key down')
         }
       })
     },
@@ -531,9 +739,14 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       // Trigger event on click input group addon button (magnifier glass)
       self._searchButton$.on('click', function (e) {
         self._openLOV({
-          searchTerm: '',
-          fillSearchText: false,
-          afterData: self._onLoad
+          searchTerm: self._item$.val() || '',
+          fillSearchText: true,
+          afterData: function (options) {
+            self._onLoad(options)
+            // Clear input as soon as modal is ready
+            self._returnValue = ''
+            self._item$.val('')
+          }
         })
       })
     },
@@ -563,7 +776,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
     _initKeyboardNavigation: function () {
       var self = this
 
-      function navigate (direction, event) {
+      function navigate(direction, event) {
         event.stopImmediatePropagation()
         event.preventDefault()
         var currentRow = self._modalDialog$.find('.t-Report-report tr.mark')
@@ -596,6 +809,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
             if (!self._activeDelay) {
               var currentRow = self._modalDialog$.find('.t-Report-report tr.mark').first()
               self._returnSelectedRow(currentRow)
+              self.options.returnOnEnterKey = true
             }
             break
           case 33: // Page up
@@ -646,7 +860,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
 
     _clearInput: function () {
       var self = this
-      apex.item(self.options.itemName).setValue('')
+      self._setItemValues('')
       self._returnValue = ''
       self._removeValidation()
       self._item$.focus()
@@ -740,7 +954,12 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
           return document.getElementById(self.options.itemName).value !== document.getElementById(self.options.itemName).defaultValue
         }
       })
-      apex.item(self.options.itemName).callbacks.displayValueFor = function () {
+      // Original JS for use before APEX 20.2
+      // apex.item(self.options.itemName).callbacks.displayValueFor = function () {
+      //   return self._item$.val()
+      // }
+      // New JS for post APEX 20.2 world
+      apex.item(self.options.itemName).displayValueFor = function () {
         return self._item$.val()
       }
 

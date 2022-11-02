@@ -12,7 +12,7 @@ Handlebars.registerPartial('rows', require('./templates/partials/_rows.hbs'))
 Handlebars.registerPartial('pagination', require('./templates/partials/_pagination.hbs'))
 
 ;(function ($, window) {
-  $.widget('mho.modalLov', {
+  $.widget('fcs.modalLov', {
     // default options
     options: {
       id: '',
@@ -579,20 +579,21 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
 
     _setItemValues: function (returnValue) {
       var self = this;
-      var reportRow = self._templateData.report.rows.find(row => row.returnVal === returnValue);
+      var reportRow = self._templateData.report?.rows?.find(row => row.returnVal === returnValue);
 
       apex.item(self.options.itemName).setValue(reportRow?.returnVal || '', reportRow?.displayVal || '');
 
       if (self.options.additionalOutputsStr) {
-        var dataRow = self.options.dataSource.row.find(row => row[self.options.returnCol] === returnValue);
+        var dataRow = self.options.dataSource?.row?.find(row => row[self.options.returnCol] === returnValue);
 
         self.options.additionalOutputsStr.split(',').forEach(str => {
           var dataKey = str.split(':')[0];
           var itemId = str.split(':')[1];
           var additionalItem = apex.item(itemId);
           if (itemId && dataKey && additionalItem) {
-            if (dataRow && dataRow[dataKey]) {
-              additionalItem.setValue(dataRow[dataKey], dataRow[dataKey]);
+            const key = Object.keys(dataRow).find(k => k.toUpperCase() === dataKey);
+            if (dataRow && dataRow[key]) {
+              additionalItem.setValue(dataRow[key], dataRow[key]);
             } else {
               additionalItem.setValue('', '');
             }

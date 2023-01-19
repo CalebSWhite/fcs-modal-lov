@@ -38,6 +38,8 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       nextLabel: 'next',
       textCase: 'N',
       additionalOutputsStr: '',
+      searchFirstColOnly: true,
+      nextOnEnter: true,
     },
 
     _returnValue: '',
@@ -75,7 +77,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
 
       // Focus on next element if ENTER key used to select row.
       setTimeout(function () {
-        if (self.options.returnOnEnterKey) {
+        if (self.options.returnOnEnterKey && self.options.nextOnEnter) {
           self.options.returnOnEnterKey = false;
           if (self.options.isPrevIndex) {
             self._focusPrevElement()
@@ -690,26 +692,21 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         // console.log('keydown', e.keyCode)
 
         if ((e.keyCode === 9 && !!self._item$.val()) || e.keyCode === 13) {
-          // Stop tab event
-          if (e.keyCode === 9) {
-            e.preventDefault()
-            if (e.shiftKey) {
-              self.options.isPrevIndex = true
-            }
-          }
-
-          if (self._item$.val().toUpperCase() === apex.item(self.options.itemName).getValue().toUpperCase()) {
-            if (self.options.isPrevIndex) {
-              self.options.isPrevIndex = false
-              self._focusPrevElement()
-            } else if (e.keyCode !== 13) {
-              self._focusNextElement()
-            }
+          // No changes, no further processing (if not enter press on empty input).
+          if (self._item$.val().toUpperCase() === apex.item(self.options.itemName).getValue().toUpperCase()
+            && !(e.keyCode === 13 && !self._item$.val())) {
             self._triggerLOVOnDisplay('011 - key no change')
             return;
           }
 
-          if (e.keyCode === 13) {
+          if (e.keyCode === 9) {
+            // Stop tab event
+            e.preventDefault()
+            if (e.shiftKey) {
+              self.options.isPrevIndex = true
+            }
+          } else if (e.keyCode === 13) {
+            // Stop enter event
             e.preventDefault();
             e.stopPropagation();
           }
@@ -724,7 +721,11 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
               // 1 valid option matches the search. Use valid option.
               self._setItemValues(self._templateData.report.rows[0].returnVal);
               self._resetFocus();
-              if (self.options.isPrevIndex) {
+              if (e.keyCode === 13) {
+                if (self.options.nextOnEnter) {
+                  self._focusNextElement();
+                }
+              } else if (self.options.isPrevIndex) {
                 self.options.isPrevIndex = false;
                 self._focusPrevElement();
               } else {

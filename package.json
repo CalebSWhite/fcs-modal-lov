@@ -5,6 +5,7 @@
   "main": "modal-lov.js",
   "scripts": {
     "build": "gulp",
+    "clean": "rm -rf  node_modules/ dist/ package-lock.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "M. Hoogendijk",

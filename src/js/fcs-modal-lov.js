@@ -70,21 +70,21 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         })[0]
         this._grid.view$.grid('gotoCell', recordId, column.name)
         this._grid.focus()
-      } else {
-        this._item$.focus()
-        // Focus on next element if ENTER key used to select row.
-        setTimeout(function () {
-          if (self.options.returnOnEnterKey) {
-            self.options.returnOnEnterKey = false;
-            if (self.options.isPrevIndex) {
-              self._focusPrevElement()
-            } else {
-              self._focusNextElement()
-            }
-          }
-          self.options.isPrevIndex = false
-        }, 100)
       }
+      this._item$.focus();
+
+      // Focus on next element if ENTER key used to select row.
+      setTimeout(function () {
+        if (self.options.returnOnEnterKey) {
+          self.options.returnOnEnterKey = false;
+          if (self.options.isPrevIndex) {
+            self._focusPrevElement()
+          } else {
+            self._focusNextElement()
+          }
+        }
+        self.options.isPrevIndex = false
+      }, 100)
     },
 
     // Combination of number, char and space, arrow keys
@@ -528,7 +528,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
     // Function based on https://stackoverflow.com/a/35173443
     _focusNextElement: function () {
       //add all elements we want to include in our selection
-      var focussableElements = [
+      var focusableElements = [
         'a:not([disabled]):not([hidden]):not([tabindex="-1"])',
         'button:not([disabled]):not([hidden]):not([tabindex="-1"])',
         'input:not([disabled]):not([hidden]):not([tabindex="-1"])',
@@ -537,14 +537,14 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         '[tabindex]:not([disabled]):not([tabindex="-1"])',
       ].join(', ');
       if (document.activeElement && document.activeElement.form) {
-        var focussable = Array.prototype.filter.call(document.activeElement.form.querySelectorAll(focussableElements),
+        var focusable = Array.prototype.filter.call(document.activeElement.form.querySelectorAll(focusableElements),
           function (element) {
             //check for visibility while always include the current activeElement
             return element.offsetWidth > 0 || element.offsetHeight > 0 || element === document.activeElement
           });
-        var index = focussable.indexOf(document.activeElement);
+        var index = focusable.indexOf(document.activeElement);
         if (index > -1) {
-          var nextElement = focussable[index + 1] || focussable[0];
+          var nextElement = focusable[index + 1] || focusable[0];
           apex.debug.trace('FCS LOV - focus next');
           nextElement.focus();
         }
@@ -554,7 +554,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
     // Function based on https://stackoverflow.com/a/35173443
     _focusPrevElement: function () {
       //add all elements we want to include in our selection
-      var focussableElements = [
+      var focusableElements = [
         'a:not([disabled]):not([hidden]):not([tabindex="-1"])',
         'button:not([disabled]):not([hidden]):not([tabindex="-1"])',
         'input:not([disabled]):not([hidden]):not([tabindex="-1"])',
@@ -563,14 +563,14 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         '[tabindex]:not([disabled]):not([tabindex="-1"])',
       ].join(', ');
       if (document.activeElement && document.activeElement.form) {
-        var focussable = Array.prototype.filter.call(document.activeElement.form.querySelectorAll(focussableElements),
+        var focusable = Array.prototype.filter.call(document.activeElement.form.querySelectorAll(focusableElements),
           function (element) {
             //check for visibility while always include the current activeElement
             return element.offsetWidth > 0 || element.offsetHeight > 0 || element === document.activeElement
           });
-        var index = focussable.indexOf(document.activeElement);
+        var index = focusable.indexOf(document.activeElement);
         if (index > -1) {
-          var prevElement = focussable[index - 1] || focussable[0];
+          var prevElement = focusable[index - 1] || focusable[0];
           apex.debug.trace('FCS LOV - focus previous');
           prevElement.focus();
         }
@@ -579,19 +579,29 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
 
     _setItemValues: function (returnValue) {
       var self = this;
-      var reportRow = self._templateData.report?.rows?.find(row => row.returnVal === returnValue);
+      var reportRow;
+      if (self._templateData.report?.rows?.length) {
+        reportRow = self._templateData.report.rows.find(row => row.returnVal === returnValue);
+      }
 
       apex.item(self.options.itemName).setValue(reportRow?.returnVal || '', reportRow?.displayVal || '');
 
       if (self.options.additionalOutputsStr) {
+        self._initGridConfig()
+
         var dataRow = self.options.dataSource?.row?.find(row => row[self.options.returnCol] === returnValue);
 
         self.options.additionalOutputsStr.split(',').forEach(str => {
           var dataKey = str.split(':')[0];
           var itemId = str.split(':')[1];
-          var additionalItem = apex.item(itemId);
+          var column;
+          if (self._grid) {
+            column = self._grid.getColumns()?.find(col => itemId?.includes(col.property))
+          }
+          var additionalItem = apex.item(column ? column.elementId : itemId);
+
           if (itemId && dataKey && additionalItem) {
-            const key = Object.keys(dataRow).find(k => k.toUpperCase() === dataKey);
+            const key = Object.keys(dataRow || {}).find(k => k.toUpperCase() === dataKey);
             if (dataRow && dataRow[key]) {
               additionalItem.setValue(dataRow[key], dataRow[key]);
             } else {
@@ -692,11 +702,16 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
             if (self.options.isPrevIndex) {
               self.options.isPrevIndex = false
               self._focusPrevElement()
-            } else {
+            } else if (e.keyCode !== 13) {
               self._focusNextElement()
             }
             self._triggerLOVOnDisplay('011 - key no change')
             return;
+          }
+
+          if (e.keyCode === 13) {
+            e.preventDefault();
+            e.stopPropagation();
           }
 
           // console.log('keydown tab or enter - check value')
@@ -708,13 +723,14 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
             if (self._templateData.pagination['rowCount'] === 1) {
               // 1 valid option matches the search. Use valid option.
               self._setItemValues(self._templateData.report.rows[0].returnVal);
+              self._resetFocus();
               if (self.options.isPrevIndex) {
-                self.options.isPrevIndex = false
-                self._focusPrevElement()
+                self.options.isPrevIndex = false;
+                self._focusPrevElement();
               } else {
-                self._focusNextElement()
+                self._focusNextElement();
               }
-              self._triggerLOVOnDisplay('007 - key off match found')
+              self._triggerLOVOnDisplay('007 - key off match found');
             } else {
               // Open the modal
               self._openLOV({

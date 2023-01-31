@@ -132,7 +132,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       var self = options.widget
       self._modalDialog$ = self._topApex.jQuery(modal)
       // Focus on search field in LOV
-      self._topApex.jQuery('#' + self.options.searchField).focus()
+      self._topApex.jQuery('#' + self.options.searchField)[0].focus()
       // Remove validation results
       self._removeValidation()
       // Add text from display field

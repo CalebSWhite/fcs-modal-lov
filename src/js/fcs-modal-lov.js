@@ -40,6 +40,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       additionalOutputsStr: '',
       searchFirstColOnly: true,
       nextOnEnter: true,
+      childColumnsStr: '',
     },
 
     _returnValue: '',
@@ -528,7 +529,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
     },
 
     // Function based on https://stackoverflow.com/a/35173443
-    _focusNextElement: function () {
+    _focusNextElement: function (ig) {
       //add all elements we want to include in our selection
       var focusableElements = [
         'a:not([disabled]):not([hidden]):not([tabindex="-1"])',
@@ -539,6 +540,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         '[tabindex]:not([disabled]):not([tabindex="-1"])',
       ].join(', ');
       if (document.activeElement && document.activeElement.form) {
+        var itemName = document.activeElement.id;
         var focusable = Array.prototype.filter.call(document.activeElement.form.querySelectorAll(focusableElements),
           function (element) {
             //check for visibility while always include the current activeElement
@@ -549,12 +551,25 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
           var nextElement = focusable[index + 1] || focusable[0];
           apex.debug.trace('FCS LOV - focus next');
           nextElement.focus();
+
+          // CW: interactive grid hack - tab next when there are cascading child columns
+          if (ig?.length > 0) {
+            var grid = ig.interactiveGrid('getViews').grid;
+            var recordId = grid.model.getRecordId(grid.view$.grid('getSelectedRecords')[0])
+            var nextColIndex = ig.interactiveGrid('option').config.columns.findIndex(col => col.staticId === itemName) + 1;
+            var nextCol = ig.interactiveGrid('option').config.columns[nextColIndex];
+            setTimeout(() => {
+              grid.view$.grid('gotoCell', recordId, nextCol.name);
+              grid.focus();
+              apex.item(nextCol.staticId).setFocus();
+            }, 50);
+          }
         }
       }
     },
 
     // Function based on https://stackoverflow.com/a/35173443
-    _focusPrevElement: function () {
+    _focusPrevElement: function (ig) {
       //add all elements we want to include in our selection
       var focusableElements = [
         'a:not([disabled]):not([hidden]):not([tabindex="-1"])',
@@ -565,6 +580,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         '[tabindex]:not([disabled]):not([tabindex="-1"])',
       ].join(', ');
       if (document.activeElement && document.activeElement.form) {
+        var itemName = document.activeElement.id;
         var focusable = Array.prototype.filter.call(document.activeElement.form.querySelectorAll(focusableElements),
           function (element) {
             //check for visibility while always include the current activeElement
@@ -575,6 +591,19 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
           var prevElement = focusable[index - 1] || focusable[0];
           apex.debug.trace('FCS LOV - focus previous');
           prevElement.focus();
+
+          // CW: interactive grid hack - tab next when there are cascading child columns
+          if (ig?.length > 0) {
+            var grid = ig.interactiveGrid('getViews').grid;
+            var recordId = grid.model.getRecordId(grid.view$.grid('getSelectedRecords')[0])
+            var prevColIndex = ig.interactiveGrid('option').config.columns.findIndex(col => col.staticId === itemName) - 1;
+            var prevCol = ig.interactiveGrid('option').config.columns[prevColIndex];
+            setTimeout(() => {
+              grid.view$.grid('gotoCell', recordId, prevCol.name);
+              grid.focus();
+              apex.item(prevCol.staticId).setFocus();
+            }, 50);
+          }
         }
       }
     },
@@ -718,19 +747,23 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
             // loadingIndicator: self._modalLoadingIndicator
           }, function () {
             if (self._templateData.pagination['rowCount'] === 1) {
+              self._initGridConfig();
+              const prevValidity = self._removeChildValidation();
+
               // 1 valid option matches the search. Use valid option.
               self._setItemValues(self._templateData.report.rows[0].returnVal);
               self._resetFocus();
               if (e.keyCode === 13) {
                 if (self.options.nextOnEnter) {
-                  self._focusNextElement();
+                  self._focusNextElement(self._ig$);
                 }
               } else if (self.options.isPrevIndex) {
                 self.options.isPrevIndex = false;
-                self._focusPrevElement();
+                self._focusPrevElement(self._ig$);
               } else {
-                self._focusNextElement();
+                self._focusNextElement(self._ig$);
               }
+              self._restoreChildValidation(prevValidity);
               self._triggerLOVOnDisplay('007 - key off match found');
             } else {
               // Open the modal
@@ -750,6 +783,45 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
           self._triggerLOVOnDisplay('008 - key down')
         }
       })
+    },
+
+    _removeChildValidation: function () {
+      const self = this;
+
+      const prevValidations = [];
+
+      if (self.options.childColumnsStr) {
+        self.options.childColumnsStr.split(',').forEach(colName => {
+          var columnId = self._grid.getColumns()?.find(col => colName?.includes(col.property))?.elementId;
+          var column = self._ig$.interactiveGrid('option').config.columns.find(col => col.staticId === columnId);
+          var item = apex.item(columnId);
+          apex.debug.trace('found child column', column);
+          // Don't turn off validation if the item has a value.
+          if (!item || !column || (item && item.getValue())) {
+            return;
+          }
+          // Save previous state.
+          prevValidations.push({
+            id: columnId,
+            isRequired: column?.validation.isRequired,
+            validity: apex.item(columnId).getValidity,
+          });
+          // Turn off validation
+          column.validation.isRequired = false;
+          item.getValidity = function() { return { valid: true };};
+        });
+      }
+
+      return prevValidations;
+    },
+
+    _restoreChildValidation: function(prevValidations) {
+      const self = this;
+
+      prevValidations?.forEach(({id, isRequired, validity}) => {
+        self._ig$.interactiveGrid('option').config.columns.find(col => col.staticId === id).validation.isRequired = isRequired;
+        apex.item(id).getValidity = validity;
+      });
     },
 
     _triggerLOVOnButton: function () {

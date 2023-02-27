@@ -614,17 +614,20 @@ is
   -- Allow rows to grow?
   l_multiline_rows      boolean := p_item.attribute_10 = 'Y';
 
-  -- Input text case. U for uppercase, L for lowercase, N for no change
+  -- Input text case (U for uppercase, L for lowercase, N for no change)
   l_text_case           apex_application_page_items.attribute_11%type := p_item.attribute_11;
 
-  -- Additional outputs.
+  -- Additional outputs
   l_additional_outputs  apex_application_page_items.attribute_12%type := p_item.attribute_12;
 
-  -- Search first column only.
+  -- Search first column only?
   l_search_first_col     boolean := p_item.attribute_13 = 'Y';
 
-  -- Next field on enter.
+  -- Next field on enter?
   l_next_on_enter       boolean := p_item.attribute_14 = 'Y';
+
+  -- Child columns
+  l_child_columns       apex_application_page_items.attribute_15%type := p_item.attribute_15;
 
   -- Value for the display item
   l_display             varchar2(32767);
@@ -741,6 +744,7 @@ begin
                     || 'additionalOutputsStr: "' || l_additional_outputs || '",'
                     || 'searchFirstColOnly: ' || case when l_search_first_col then 'true' else 'false' end || ','
                     || 'nextOnEnter: ' || case when l_next_on_enter then 'true' else 'false' end || ','
+                    || 'childColumnsStr: "' || l_child_columns || '",'
                 ||'});'
       );
     end if;

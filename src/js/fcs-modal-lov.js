@@ -41,6 +41,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       searchFirstColOnly: true,
       nextOnEnter: true,
       childColumnsStr: '',
+      readOnly: false,
     },
 
     _returnValue: '',
@@ -66,15 +67,17 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
 
     _resetFocus: function () {
       var self = this
-      if (this._grid) {
-        var recordId = this._grid.model.getRecordId(this._grid.view$.grid('getSelectedRecords')[0])
-        var column = this._ig$.interactiveGrid('option').config.columns.filter(function (column) {
-          return column.staticId === self.options.itemName
-        })[0]
-        this._grid.view$.grid('gotoCell', recordId, column.name)
-        this._grid.focus()
+      if (!self.options.readOnly) {
+        if (self._grid) {
+          var recordId = self._grid.model.getRecordId(self._grid.view$.grid('getSelectedRecords')[0])
+          var column = self._ig$.interactiveGrid('option').config.columns.filter(function (column) {
+            return column.staticId === self.options.itemName
+          })[0]
+          self._grid.view$.grid('gotoCell', recordId, column.name);
+          self._grid.focus()
+        }
+        self._item$.focus()
       }
-      this._item$.focus();
 
       // Focus on next element if ENTER key used to select row.
       setTimeout(function () {
@@ -97,7 +100,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       40, // arrow down
       32, // spacebar
       8, // backspace
-      106, 107, 109, 110, 111, 186, 187, 188, 189, 190, 191, 192, 219, 220, 221, 220 // interpunction
+      106, 107, 109, 110, 111, 186, 187, 188, 189, 190, 191, 192, 219, 220, 221, 220, // interpunction
     ],
 
     // Keys to indicate completing input (esc, tab, enter)
@@ -109,12 +112,12 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       self._item$ = $('#' + self.options.itemName)
       self._returnValue = self._item$.data('returnValue').toString()
       self._searchButton$ = $('#' + self.options.searchButton)
-      self._clearInput$ = self._item$.parent().find('.fcs-search-clear')
+      self._clearInput$ = self._item$.parent().find('.fcs-search-clear');
 
       self._addCSSToTopLevel()
 
       // Trigger event on click input display field
-      self._triggerLOVOnDisplay('000 - create')
+      self._triggerLOVOnDisplay('000 - create ' + self.options?.itemName)
 
       // Trigger event on click input group addon button (magnifier glass)
       self._triggerLOVOnButton()
@@ -209,7 +212,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         close: function () {
           self._topApex.navigation.endFreezeScroll()
           self._resetFocus()
-        }
+        },
       })
     },
 
@@ -248,7 +251,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         title: self.options.title,
         modalSize: self.options.modalSize,
         region: {
-          attributes: 'style="bottom: 66px;"'
+          attributes: 'style="bottom: 66px;"',
         },
         searchField: {
           id: self.options.searchField,
@@ -323,11 +326,11 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         if (columns.length === 1 && self.options.itemLabel) {
           column['column' + key] = {
             name: val,
-            label: self.options.itemLabel
+            label: self.options.itemLabel,
           }
         } else {
           column['column' + key] = {
-            name: val
+            name: val,
           }
         }
         templateData.report.columns = $.extend(templateData.report.columns, column)
@@ -344,7 +347,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
 
       var rows = $.map(self.options.dataSource.row, function (row, rowKey) {
         tmpRow = {
-          columns: {}
+          columns: {},
         }
         // add column values to row
         $.each(templateData.report.columns, function (colId, col) {
@@ -379,7 +382,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       var settings = {
         searchTerm: '',
         firstRow: 1,
-        fillSearchText: true
+        fillSearchText: true,
       }
 
       settings = $.extend(settings, options)
@@ -397,7 +400,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         x01: 'GET_DATA',
         x02: searchTerm, // searchterm
         x03: settings.firstRow, // first rownum to return
-        pageItems: items
+        pageItems: items,
       }, {
         target: self._item$,
         dataType: 'json',
@@ -407,9 +410,9 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
           self._templateData = self._getTemplateData()
           handler({
             widget: self,
-            fillSearchText: settings.fillSearchText
+            fillSearchText: settings.fillSearchText,
           })
-        }
+        },
       })
     },
 
@@ -419,7 +422,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       if (self._lastSearchTerm !== self._topApex.item(self.options.searchField).getValue()) {
         self._getData({
           firstRow: 1,
-          loadingIndicator: self._modalLoadingIndicator
+          loadingIndicator: self._modalLoadingIndicator,
         }, function () {
           self._onReload()
         })
@@ -445,7 +448,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         srcEl.delayTimer = setTimeout(function () {
           self._getData({
             firstRow: 1,
-            loadingIndicator: self._modalLoadingIndicator
+            loadingIndicator: self._modalLoadingIndicator,
           }, function () {
             self._onReload()
           })
@@ -466,7 +469,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       self._topApex.jQuery(window.top.document).on('click', prevSelector, function (e) {
         self._getData({
           firstRow: self._getFirstRownumPrevSet(),
-          loadingIndicator: self._modalLoadingIndicator
+          loadingIndicator: self._modalLoadingIndicator,
         }, function () {
           self._onReload()
         })
@@ -476,7 +479,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       self._topApex.jQuery(window.top.document).on('click', nextSelector, function (e) {
         self._getData({
           firstRow: self._getFirstRownumNextSet(),
-          loadingIndicator: self._modalLoadingIndicator
+          loadingIndicator: self._modalLoadingIndicator,
         }, function () {
           self._onReload()
         })
@@ -650,6 +653,9 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         apex.debug.trace('_triggerLOVOnDisplay called from "' + calledFrom + '"');
       }
 
+      self.options.readOnly = $('#' + self.options.itemName).prop('readOnly')
+        || $('#' + self.options.itemName).prop('disabled');
+
       // Trigger event on click outside element
       $(document).mousedown(function (event) {
         self._item$.off('keydown')
@@ -657,7 +663,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
 
         var $target = $(event.target);
 
-        if (!$target.closest('#' + self.options.itemName).length && !self._item$.is(":focus")) {
+        if (!$target.closest('#' + self.options.itemName).length && !self._item$.is(':focus')) {
           self._triggerLOVOnDisplay('001 - not focused click off');
           return;
         }
@@ -707,7 +713,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
                 // Clear input as soon as modal is ready
                 self._returnValue = ''
                 self._item$.val('')
-              }
+              },
             })
           }
         })
@@ -775,7 +781,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
                   // Clear input as soon as modal is ready
                   self._returnValue = ''
                   self._item$.val('')
-                }
+                },
               })
             }
           })
@@ -808,17 +814,17 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
           });
           // Turn off validation
           column.validation.isRequired = false;
-          item.getValidity = function() { return { valid: true };};
+          item.getValidity = function () { return { valid: true };};
         });
       }
 
       return prevValidations;
     },
 
-    _restoreChildValidation: function(prevValidations) {
+    _restoreChildValidation: function (prevValidations) {
       const self = this;
 
-      prevValidations?.forEach(({id, isRequired, validity}) => {
+      prevValidations?.forEach(({ id, isRequired, validity }) => {
         self._ig$.interactiveGrid('option').config.columns.find(col => col.staticId === id).validation.isRequired = isRequired;
         apex.item(id).getValidity = validity;
       });
@@ -836,7 +842,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
             // Clear input as soon as modal is ready
             self._returnValue = ''
             self._item$.val('')
-          }
+          },
         })
       })
     },
@@ -948,12 +954,14 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
       apex.message.clearErrors(this.options.itemName)
     },
 
-    _clearInput: function () {
+    _clearInput: function (doFocus = true) {
       var self = this
       self._setItemValues('')
       self._returnValue = ''
       self._removeValidation()
-      self._item$.focus()
+      if (doFocus && !self.options?.readOnly) {
+        self._item$.focus();
+      }
     },
 
     _initClearInput: function () {
@@ -967,7 +975,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
     _initCascadingLOVs: function () {
       var self = this
       $(self.options.cascadingItems).on('change', function () {
-        self._clearInput()
+        self._clearInput(false)
       })
     },
 
@@ -976,7 +984,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
 
       var promise = apex.server.plugin(self.options.ajaxIdentifier, {
         x01: 'GET_VALUE',
-        x02: pValue // returnVal
+        x02: pValue, // returnVal
       }, {
         dataType: 'json',
         loadingIndicator: $.proxy(self._itemLoadingIndicator, self),
@@ -985,7 +993,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
           self._returnValue = pData.returnValue
           self._item$.val(pData.displayValue)
           self._item$.trigger('change')
-        }
+        },
       })
 
       promise
@@ -1042,7 +1050,7 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
         },
         isChanged: function () {
           return document.getElementById(self.options.itemName).value !== document.getElementById(self.options.itemName).defaultValue
-        }
+        },
       })
       // Original JS for use before APEX 20.2
       // apex.item(self.options.itemName).callbacks.displayValueFor = function () {
@@ -1070,6 +1078,6 @@ Handlebars.registerPartial('pagination', require('./templates/partials/_paginati
     _modalLoadingIndicator: function (loadingIndicator) {
       this._modalDialog$.prepend(loadingIndicator)
       return loadingIndicator
-    }
+    },
   })
 })(apex.jQuery, window)
